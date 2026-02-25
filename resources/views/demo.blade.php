@@ -29,7 +29,7 @@
         }
 
         .page {
-            max-width: 1400px;
+            max-width: 1760px;
             margin: 20px auto;
             padding: 0 16px 24px;
             display: grid;
@@ -133,7 +133,7 @@
         table {
             width: 100%;
             border-collapse: collapse;
-            min-width: 680px;
+            min-width: 820px;
         }
 
         th,
@@ -397,7 +397,7 @@
                     <h2>Пользователи</h2>
                     <div class="meta" id="usersMeta">Загрузка...</div>
                 </div>
-                <button class="btn" id="createUserBtn">Создать пользователя</button>
+                <button class="btn" id="createUserBtn">Добавить пользователя</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -421,7 +421,7 @@
                     <h2>Категории</h2>
                     <div class="meta" id="categoriesMeta">Загрузка...</div>
                 </div>
-                <button class="btn" id="createCategoryBtn">Создать категорию</button>
+                <button class="btn" id="createCategoryBtn">Добавить категорию</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -444,7 +444,7 @@
                     <h2>Товары</h2>
                     <div class="meta" id="productsMeta">Загрузка...</div>
                 </div>
-                <button class="btn" id="createProductBtn">Создать товар</button>
+                <button class="btn" id="createProductBtn">Добавить товар</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -468,7 +468,7 @@
                     <h2>Заказы</h2>
                     <div class="meta" id="ordersMeta">Загрузка...</div>
                 </div>
-                <button class="btn" id="createOrderBtn">Создать заказ</button>
+                <button class="btn" id="createOrderBtn">Добавить заказ</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -1491,20 +1491,27 @@
             return;
         }
 
-        productsBody.innerHTML = state.products.map((product) => `
-            <tr>
-                <td>${product.id}</td>
-                <td>${escapeHtml(product.name)}</td>
-                <td>${product.category_id}</td>
-                <td>${escapeHtml(product.price)}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn btn-xs btn-warning" data-entity="product" data-action="edit" data-id="${product.id}">Изменить</button>
-                        <button class="btn btn-xs btn-danger" data-entity="product" data-action="delete" data-id="${product.id}">Удалить</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        productsBody.innerHTML = state.products.map((product) => {
+            const category = state.categories.find((entry) => Number(entry.id) === Number(product.category_id));
+            const categoryLabel = category
+                ? `${escapeHtml(category.name)} (ID ${category.id})`
+                : `ID ${product.category_id ?? '—'}`;
+
+            return `
+                <tr>
+                    <td>${product.id}</td>
+                    <td>${escapeHtml(product.name)}</td>
+                    <td>${categoryLabel}</td>
+                    <td>${escapeHtml(product.price)}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn btn-xs btn-warning" data-entity="product" data-action="edit" data-id="${product.id}">Изменить</button>
+                            <button class="btn btn-xs btn-danger" data-entity="product" data-action="delete" data-id="${product.id}">Удалить</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     };
 
     const renderOrdersTable = () => {
@@ -1515,21 +1522,28 @@
             return;
         }
 
-        ordersBody.innerHTML = state.orders.map((order) => `
-            <tr>
-                <td>${order.id}</td>
-                <td>${order.user_id}</td>
-                <td>${escapeHtml(order.status)}</td>
-                <td>${escapeHtml(order.total)}</td>
-                <td>
-                    <div class="actions">
-                        <button class="btn btn-xs btn-secondary" data-entity="order" data-action="show" data-id="${order.id}">Открыть</button>
-                        <button class="btn btn-xs btn-warning" data-entity="order" data-action="status" data-id="${order.id}">Статус</button>
-                        <button class="btn btn-xs btn-danger" data-entity="order" data-action="delete" data-id="${order.id}">Удалить</button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+        ordersBody.innerHTML = state.orders.map((order) => {
+            const user = state.users.find((entry) => Number(entry.id) === Number(order.user_id));
+            const userLabel = user
+                ? `${escapeHtml(user.name)} (ID ${user.id})`
+                : `ID ${order.user_id ?? '—'}`;
+
+            return `
+                <tr>
+                    <td>${order.id}</td>
+                    <td>${userLabel}</td>
+                    <td>${escapeHtml(order.status)}</td>
+                    <td>${escapeHtml(order.total)}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn btn-xs btn-secondary" data-entity="order" data-action="show" data-id="${order.id}">Открыть</button>
+                            <button class="btn btn-xs btn-warning" data-entity="order" data-action="status" data-id="${order.id}">Статус</button>
+                            <button class="btn btn-xs btn-danger" data-entity="order" data-action="delete" data-id="${order.id}">Удалить</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
     };
 
     const renderTables = () => {
