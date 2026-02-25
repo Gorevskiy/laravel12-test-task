@@ -112,6 +112,18 @@
             gap: 8px;
         }
 
+        .table-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .table-head-left {
+            display: grid;
+            gap: 4px;
+        }
+
         .table-wrap {
             overflow: auto;
             border: 1px solid var(--line);
@@ -300,6 +312,17 @@
             padding: 0 16px 16px;
         }
 
+        .modal-message {
+            margin: 0;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            background: #f8fbff;
+            padding: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #243b53;
+        }
+
         .modal-subsection {
             border: 1px solid var(--line);
             border-radius: 10px;
@@ -358,24 +381,19 @@
     </section>
 
     <section class="card toolbar">
-        <h2>Быстрые действия</h2>
-
         <div class="toolbar-actions">
             <button class="btn" id="reloadBtn">Обновить все таблицы</button>
-            <button class="btn" id="createUserBtn">Создать пользователя</button>
-            <button class="btn" id="createCategoryBtn">Создать категорию</button>
-            <button class="btn" id="createProductBtn">Создать товар</button>
-            <button class="btn" id="createOrderBtn">Создать заказ</button>
-            <button class="btn btn-warning" id="addItemBtn">Добавить товар в заказ</button>
-            <button class="btn btn-danger" id="removeItemBtn">Удалить товар из заказа</button>
         </div>
     </section>
 
     <section class="tables-grid">
         <article class="card table-card">
-            <div>
-                <h2>Пользователи</h2>
-                <div class="meta" id="usersMeta">Загрузка...</div>
+            <div class="table-head">
+                <div class="table-head-left">
+                    <h2>Пользователи</h2>
+                    <div class="meta" id="usersMeta">Загрузка...</div>
+                </div>
+                <button class="btn" id="createUserBtn">Создать пользователя</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -394,9 +412,12 @@
         </article>
 
         <article class="card table-card">
-            <div>
-                <h2>Категории</h2>
-                <div class="meta" id="categoriesMeta">Загрузка...</div>
+            <div class="table-head">
+                <div class="table-head-left">
+                    <h2>Категории</h2>
+                    <div class="meta" id="categoriesMeta">Загрузка...</div>
+                </div>
+                <button class="btn" id="createCategoryBtn">Создать категорию</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -414,9 +435,12 @@
         </article>
 
         <article class="card table-card">
-            <div>
-                <h2>Товары</h2>
-                <div class="meta" id="productsMeta">Загрузка...</div>
+            <div class="table-head">
+                <div class="table-head-left">
+                    <h2>Товары</h2>
+                    <div class="meta" id="productsMeta">Загрузка...</div>
+                </div>
+                <button class="btn" id="createProductBtn">Создать товар</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -435,9 +459,12 @@
         </article>
 
         <article class="card table-card">
-            <div>
-                <h2>Заказы</h2>
-                <div class="meta" id="ordersMeta">Загрузка...</div>
+            <div class="table-head">
+                <div class="table-head-left">
+                    <h2>Заказы</h2>
+                    <div class="meta" id="ordersMeta">Загрузка...</div>
+                </div>
+                <button class="btn" id="createOrderBtn">Создать заказ</button>
             </div>
             <div class="table-wrap">
                 <table>
@@ -634,6 +661,40 @@
     </div>
 </div>
 
+<div class="modal-backdrop" id="orderStatusModalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="orderStatusModalTitle">
+        <div class="modal-head">
+            <h3 class="modal-title" id="orderStatusModalTitle">Изменить статус заказа</h3>
+            <button class="modal-close" id="orderStatusModalCloseBtn" type="button" aria-label="Закрыть">&times;</button>
+        </div>
+        <div class="modal-body">
+            <label class="modal-field">Новый статус
+                <input id="orderStatusModalValue" type="text" placeholder="new">
+            </label>
+            <div class="modal-error" id="orderStatusModalError"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="orderStatusModalCancelBtn" type="button">Отмена</button>
+            <button class="btn" id="orderStatusModalSaveBtn" type="button">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="socketMessageModalBackdrop">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="socketMessageModalTitle">
+        <div class="modal-head">
+            <h3 class="modal-title" id="socketMessageModalTitle">Событие</h3>
+            <button class="modal-close" id="socketMessageModalCloseBtn" type="button" aria-label="Закрыть">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="modal-message" id="socketMessageModalText"></p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn" id="socketMessageModalOkBtn" type="button">ОК</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
@@ -699,6 +760,17 @@
     const categoryProductsTableBody = byId('categoryProductsTableBody');
     const categoryProductsModalOkBtn = byId('categoryProductsModalOkBtn');
     const categoryProductsModalCloseBtn = byId('categoryProductsModalCloseBtn');
+    const orderStatusModalBackdrop = byId('orderStatusModalBackdrop');
+    const orderStatusModalValue = byId('orderStatusModalValue');
+    const orderStatusModalError = byId('orderStatusModalError');
+    const orderStatusModalSaveBtn = byId('orderStatusModalSaveBtn');
+    const orderStatusModalCancelBtn = byId('orderStatusModalCancelBtn');
+    const orderStatusModalCloseBtn = byId('orderStatusModalCloseBtn');
+    const socketMessageModalBackdrop = byId('socketMessageModalBackdrop');
+    const socketMessageModalTitle = byId('socketMessageModalTitle');
+    const socketMessageModalText = byId('socketMessageModalText');
+    const socketMessageModalOkBtn = byId('socketMessageModalOkBtn');
+    const socketMessageModalCloseBtn = byId('socketMessageModalCloseBtn');
 
     const state = {
         users: [],
@@ -741,6 +813,13 @@
             categoryId: null,
             categoryName: '',
             products: [],
+        },
+        orderStatusModal: {
+            open: false,
+            orderId: null,
+        },
+        socketMessageModal: {
+            open: false,
         },
         productCatalog: [],
     };
@@ -1182,6 +1261,68 @@
         }
     };
 
+    const closeOrderStatusModal = () => {
+        state.orderStatusModal.open = false;
+        state.orderStatusModal.orderId = null;
+        orderStatusModalError.textContent = '';
+        orderStatusModalBackdrop.classList.remove('show');
+    };
+
+    const openOrderStatusModal = ({ orderId, status }) => {
+        state.orderStatusModal.open = true;
+        state.orderStatusModal.orderId = Number(orderId);
+        orderStatusModalError.textContent = '';
+        orderStatusModalValue.value = status ?? 'new';
+        orderStatusModalBackdrop.classList.add('show');
+        setTimeout(() => orderStatusModalValue.focus(), 0);
+    };
+
+    const submitOrderStatusModal = async () => {
+        const orderId = state.orderStatusModal.orderId;
+        const status = orderStatusModalValue.value.trim();
+
+        if (!orderId) {
+            orderStatusModalError.textContent = 'Не выбран заказ.';
+            return;
+        }
+
+        if (!status) {
+            orderStatusModalError.textContent = 'Укажите новый статус.';
+            return;
+        }
+
+        try {
+            const result = await api(`/api/orders/${orderId}`, {
+                method: 'PUT',
+                body: JSON.stringify({ status }),
+            });
+
+            if (state.orderModal.open && Number(state.orderModal.orderId) === Number(orderId)) {
+                await refreshOrderInModal();
+            }
+
+            closeOrderStatusModal();
+            await loadTables();
+            print(result);
+        } catch (error) {
+            print(error);
+        }
+    };
+
+    const closeSocketMessageModal = () => {
+        state.socketMessageModal.open = false;
+        socketMessageModalBackdrop.classList.remove('show');
+    };
+
+    const openSocketMessageModal = ({ title, message }) => {
+        if (!message) return;
+
+        state.socketMessageModal.open = true;
+        socketMessageModalTitle.textContent = title || 'Событие';
+        socketMessageModalText.textContent = message;
+        socketMessageModalBackdrop.classList.add('show');
+    };
+
     const renderUsersTable = () => {
         usersMeta.textContent = `Всего: ${state.users.length}`;
 
@@ -1274,8 +1415,6 @@
                     <div class="actions">
                         <button class="btn btn-xs btn-secondary" data-entity="order" data-action="show" data-id="${order.id}">Открыть</button>
                         <button class="btn btn-xs btn-warning" data-entity="order" data-action="status" data-id="${order.id}">Статус</button>
-                        <button class="btn btn-xs" data-entity="order" data-action="add-item" data-id="${order.id}">+ Товар</button>
-                        <button class="btn btn-xs" data-entity="order" data-action="remove-item" data-id="${order.id}">- Товар</button>
                         <button class="btn btn-xs btn-danger" data-entity="order" data-action="delete" data-id="${order.id}">Удалить</button>
                     </div>
                 </td>
@@ -1363,29 +1502,6 @@
             },
         });
     });
-
-    byId('addItemBtn').addEventListener('click', () => runAction(async () => {
-        const { orderId, productId, quantity } = currentIds();
-        if (!orderId || !productId) {
-            return { message: 'Недостаточно данных: нужен заказ и товар.' };
-        }
-
-        return await api(`/api/orders/${orderId}/items`, {
-            method: 'POST',
-            body: JSON.stringify({ product_id: productId, quantity }),
-        });
-    }));
-
-    byId('removeItemBtn').addEventListener('click', () => runAction(async () => {
-        const { orderId, productId } = currentIds();
-        if (!orderId || !productId) {
-            return { message: 'Недостаточно данных: нужен заказ и товар.' };
-        }
-
-        return await api(`/api/orders/${orderId}/items/${productId}`, {
-            method: 'DELETE',
-        });
-    }));
 
     orderModalAddItemBtn.addEventListener('click', async () => {
         try {
@@ -1490,39 +1606,17 @@
             },
             order: {
                 show: () => openOrderEditor(id),
-                status: () => runAction(async () => {
-                    const order = await api(`/api/orders/${id}`);
-                    const newStatus = prompt('Новый статус заказа', order?.data?.status || 'new');
-                    if (!newStatus) return { message: 'Изменение статуса отменено.' };
-
-                    return await api(`/api/orders/${id}`, {
-                        method: 'PUT',
-                        body: JSON.stringify({ status: newStatus }),
-                    });
-                }),
-                'add-item': () => runAction(async () => {
-                    const selectedProductId = Number(prompt('ID товара', String(currentIds().productId)) || currentIds().productId);
-                    const selectedQty = Number(prompt('Количество', String(currentIds().quantity)) || 1);
-
-                    state.selected.orderId = id;
-                    state.selected.productId = selectedProductId;
-                    state.selected.quantity = selectedQty;
-
-                    return await api(`/api/orders/${id}/items`, {
-                        method: 'POST',
-                        body: JSON.stringify({ product_id: selectedProductId, quantity: selectedQty }),
-                    });
-                }),
-                'remove-item': () => runAction(async () => {
-                    const selectedProductId = Number(prompt('ID товара для удаления', String(currentIds().productId)) || currentIds().productId);
-
-                    state.selected.orderId = id;
-                    state.selected.productId = selectedProductId;
-
-                    return await api(`/api/orders/${id}/items/${selectedProductId}`, {
-                        method: 'DELETE',
-                    });
-                }),
+                status: async () => {
+                    try {
+                        const order = await api(`/api/orders/${id}`);
+                        openOrderStatusModal({
+                            orderId: id,
+                            status: order?.data?.status ?? 'new',
+                        });
+                    } catch (error) {
+                        print(error);
+                    }
+                },
                 delete: () => runAction(async () => {
                     if (!confirm(`Удалить заказ #${id}?`)) {
                         return { message: 'Удаление заказа отменено.' };
@@ -1795,6 +1889,12 @@
         if (event.key === 'Escape' && state.categoryProductsModal.open) {
             closeCategoryProductsModal();
         }
+        if (event.key === 'Escape' && state.orderStatusModal.open) {
+            closeOrderStatusModal();
+        }
+        if (event.key === 'Escape' && state.socketMessageModal.open) {
+            closeSocketMessageModal();
+        }
     });
 
     categoryModalSaveBtn.addEventListener('click', submitCategoryModal);
@@ -1841,9 +1941,34 @@
         }
     });
 
+    orderStatusModalSaveBtn.addEventListener('click', submitOrderStatusModal);
+    orderStatusModalCancelBtn.addEventListener('click', closeOrderStatusModal);
+    orderStatusModalCloseBtn.addEventListener('click', closeOrderStatusModal);
+    orderStatusModalBackdrop.addEventListener('click', (event) => {
+        if (event.target === orderStatusModalBackdrop) {
+            closeOrderStatusModal();
+        }
+    });
+
+    socketMessageModalOkBtn.addEventListener('click', closeSocketMessageModal);
+    socketMessageModalCloseBtn.addEventListener('click', closeSocketMessageModal);
+    socketMessageModalBackdrop.addEventListener('click', (event) => {
+        if (event.target === socketMessageModalBackdrop) {
+            closeSocketMessageModal();
+        }
+    });
+
     (() => {
         const status = byId('socketStatus');
         const log = byId('eventLog');
+        const eventMessageFallbacks = {
+            'user.created': 'Пользователь создан',
+            'user.updated': 'Пользователь обновлен',
+            'product.created': 'Товар создан',
+            'product.updated': 'Товар обновлен',
+            'order.created': 'Заказ создан',
+            'order.updated': 'Заказ обновлен',
+        };
 
         const appendEvent = (label, payload) => {
             const item = document.createElement('li');
@@ -1852,6 +1977,21 @@
 
             while (log.children.length > 50) {
                 log.removeChild(log.lastChild);
+            }
+
+            const messageFromPayload = typeof payload?.message === 'string'
+                ? payload.message.trim()
+                : '';
+            const message = messageFromPayload
+                || (typeof payload?.data?.message === 'string' ? payload.data.message.trim() : '')
+                || eventMessageFallbacks[label]
+                || '';
+
+            if (label.includes('.') && message) {
+                openSocketMessageModal({
+                    title: `Событие: ${label}`,
+                    message,
+                });
             }
         };
 
