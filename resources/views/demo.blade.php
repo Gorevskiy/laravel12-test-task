@@ -250,6 +250,10 @@
             width: min(1080px, 96vw);
         }
 
+        .modal.modal-confirm {
+            width: min(480px, 100%);
+        }
+
         .modal-head {
             padding: 14px 16px;
             border-bottom: 1px solid var(--line);
@@ -695,6 +699,22 @@
     </div>
 </div>
 
+<div class="modal-backdrop" id="confirmModalBackdrop">
+    <div class="modal modal-confirm" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+        <div class="modal-head">
+            <h3 class="modal-title" id="confirmModalTitle">Подтверждение удаления</h3>
+            <button class="modal-close" id="confirmModalCloseBtn" type="button" aria-label="Закрыть">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="modal-message" id="confirmModalMessage">Подтвердите действие.</p>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" id="confirmModalCancelBtn" type="button">Отмена</button>
+            <button class="btn btn-danger" id="confirmModalConfirmBtn" type="button">Удалить</button>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/pusher-js@8.4.0/dist/web/pusher.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.16.1/dist/echo.iife.js"></script>
 <script>
@@ -771,6 +791,12 @@
     const socketMessageModalText = byId('socketMessageModalText');
     const socketMessageModalOkBtn = byId('socketMessageModalOkBtn');
     const socketMessageModalCloseBtn = byId('socketMessageModalCloseBtn');
+    const confirmModalBackdrop = byId('confirmModalBackdrop');
+    const confirmModalTitle = byId('confirmModalTitle');
+    const confirmModalMessage = byId('confirmModalMessage');
+    const confirmModalConfirmBtn = byId('confirmModalConfirmBtn');
+    const confirmModalCancelBtn = byId('confirmModalCancelBtn');
+    const confirmModalCloseBtn = byId('confirmModalCloseBtn');
 
     const state = {
         users: [],
@@ -821,6 +847,11 @@
         socketMessageModal: {
             open: false,
         },
+        confirmModal: {
+            open: false,
+            resolver: null,
+        },
+        suppressedSocketLabelsOnce: new Set(),
         productCatalog: [],
     };
 
@@ -1040,9 +1071,9 @@
         const orderId = state.orderModal.orderId;
 
         if (!orderId || !order) {
-            orderItemsMeta.textContent = 'Сначала сохраните заказ, затем можно управлять товарами.';
+            orderItemsMeta.textContent = 'Заказ еще не сохранен. Нажмите "Добавить", чтобы сохранить заказ и выбрать товар.';
             orderItemsTableBody.innerHTML = '<tr><td colspan="7">Заказ еще не создан.</td></tr>';
-            orderModalAddItemBtn.disabled = true;
+            orderModalAddItemBtn.disabled = false;
             return;
         }
 
@@ -1126,9 +1157,60 @@
         orderItemModalProductId.value = String(exists ? preferred : fallbackId ?? '');
     };
 
+    const ensureOrderCreatedForItems = async () => {
+        if (state.orderModal.orderId) {
+            return true;
+        }
+
+        const userId = Number(orderModalUserId.value);
+        const status = orderModalStatus.value.trim();
+
+        if (!Number.isInteger(userId) || userId <= 0) {
+            orderModalError.textContent = 'Выберите пользователя.';
+            return false;
+        }
+
+        if (!status) {
+            orderModalError.textContent = 'Укажите статус заказа.';
+            return false;
+        }
+
+        // Заказ создается технически перед выбором товара: suppress один popup order.created.
+        state.suppressedSocketLabelsOnce.add('order.created');
+
+        const created = await api('/api/orders', {
+            method: 'POST',
+            body: JSON.stringify({ user_id: userId, status }),
+        });
+
+        const createdOrder = created?.data;
+        const createdOrderId = Number(createdOrder?.id);
+
+        if (!Number.isInteger(createdOrderId) || createdOrderId <= 0) {
+            throw { status: 500, body: { message: 'Не удалось создать заказ перед добавлением товара.' } };
+        }
+
+        state.orderModal.mode = 'edit';
+        state.orderModal.orderId = createdOrderId;
+        state.orderModal.order = createdOrder ?? null;
+        state.selected.orderId = createdOrderId;
+        state.selected.userId = createdOrder?.user_id ?? userId;
+
+        orderModalTitle.textContent = `Заказ #${createdOrderId}`;
+        orderModalUserId.disabled = true;
+        orderModalStatus.value = createdOrder?.status ?? status;
+        resetOrderModalError();
+
+        await refreshOrderInModal();
+        await loadTables();
+        print(created);
+
+        return true;
+    };
+
     const openOrderItemModal = async () => {
-        if (!state.orderModal.orderId) {
-            orderModalError.textContent = 'Сначала сохраните заказ.';
+        const hasOrder = await ensureOrderCreatedForItems();
+        if (!hasOrder) {
             return;
         }
 
@@ -1323,6 +1405,35 @@
         socketMessageModalBackdrop.classList.add('show');
     };
 
+    const closeConfirmModal = (isConfirmed = false) => {
+        const resolver = state.confirmModal.resolver;
+        state.confirmModal.open = false;
+        state.confirmModal.resolver = null;
+        confirmModalBackdrop.classList.remove('show');
+
+        if (typeof resolver === 'function') {
+            resolver(isConfirmed);
+        }
+    };
+
+    const confirmAction = ({ title, message, confirmText = 'Удалить', cancelText = 'Отмена' }) => {
+        if (state.confirmModal.open) {
+            closeConfirmModal(false);
+        }
+
+        state.confirmModal.open = true;
+        confirmModalTitle.textContent = title || 'Подтверждение';
+        confirmModalMessage.textContent = message || 'Подтвердите действие.';
+        confirmModalConfirmBtn.textContent = confirmText;
+        confirmModalCancelBtn.textContent = cancelText;
+        confirmModalBackdrop.classList.add('show');
+
+        return new Promise((resolve) => {
+            state.confirmModal.resolver = resolve;
+            setTimeout(() => confirmModalConfirmBtn.focus(), 0);
+        });
+    };
+
     const renderUsersTable = () => {
         usersMeta.textContent = `Всего: ${state.users.length}`;
 
@@ -1389,7 +1500,6 @@
                 <td>
                     <div class="actions">
                         <button class="btn btn-xs btn-warning" data-entity="product" data-action="edit" data-id="${product.id}">Изменить</button>
-                        <button class="btn btn-xs" data-entity="product" data-action="add-item" data-id="${product.id}">В заказ</button>
                         <button class="btn btn-xs btn-danger" data-entity="product" data-action="delete" data-id="${product.id}">Удалить</button>
                     </div>
                 </td>
@@ -1519,7 +1629,12 @@
         const productId = Number(button.dataset.productId);
         if (!orderId || !productId) return;
 
-        if (!confirm(`Удалить товар #${productId} из заказа #${orderId}?`)) {
+        const isConfirmed = await confirmAction({
+            title: 'Удаление товара из заказа',
+            message: `Удалить товар #${productId} из заказа #${orderId}?`,
+            confirmText: 'Удалить',
+        });
+        if (!isConfirmed) {
             return;
         }
 
@@ -1547,7 +1662,6 @@
         const handlers = {
             user: {
                 show: () => openUserEditor(id),
-                profile: () => runAction(() => api(`/api/users/${id}/profile`), { reload: false }),
                 edit: () => openUserEditor(id),
                 order: () => runAction(async () => {
                     const created = await api('/api/orders', {
@@ -1561,7 +1675,12 @@
                     return created;
                 }),
                 delete: () => runAction(async () => {
-                    if (!confirm(`Удалить пользователя #${id}?`)) {
+                    const isConfirmed = await confirmAction({
+                        title: 'Удаление пользователя',
+                        message: `Удалить пользователя #${id}?`,
+                        confirmText: 'Удалить',
+                    });
+                    if (!isConfirmed) {
                         return { message: 'Удаление пользователя отменено.' };
                     }
                     await api(`/api/users/${id}`, { method: 'DELETE' });
@@ -1572,7 +1691,12 @@
                 products: () => openCategoryProductsModal(id),
                 edit: () => openCategoryEditor(id),
                 delete: () => runAction(async () => {
-                    if (!confirm(`Удалить категорию #${id}?`)) {
+                    const isConfirmed = await confirmAction({
+                        title: 'Удаление категории',
+                        message: `Удалить категорию #${id}?`,
+                        confirmText: 'Удалить',
+                    });
+                    if (!isConfirmed) {
                         return { message: 'Удаление категории отменено.' };
                     }
                     await api(`/api/categories/${id}`, { method: 'DELETE' });
@@ -1597,7 +1721,12 @@
                     });
                 }),
                 delete: () => runAction(async () => {
-                    if (!confirm(`Удалить товар #${id}?`)) {
+                    const isConfirmed = await confirmAction({
+                        title: 'Удаление товара',
+                        message: `Удалить товар #${id}?`,
+                        confirmText: 'Удалить',
+                    });
+                    if (!isConfirmed) {
                         return { message: 'Удаление товара отменено.' };
                     }
                     await api(`/api/products/${id}`, { method: 'DELETE' });
@@ -1618,7 +1747,12 @@
                     }
                 },
                 delete: () => runAction(async () => {
-                    if (!confirm(`Удалить заказ #${id}?`)) {
+                    const isConfirmed = await confirmAction({
+                        title: 'Удаление заказа',
+                        message: `Удалить заказ #${id}?`,
+                        confirmText: 'Удалить',
+                    });
+                    if (!isConfirmed) {
                         return { message: 'Удаление заказа отменено.' };
                     }
                     await api(`/api/orders/${id}`, { method: 'DELETE' });
@@ -1895,6 +2029,9 @@
         if (event.key === 'Escape' && state.socketMessageModal.open) {
             closeSocketMessageModal();
         }
+        if (event.key === 'Escape' && state.confirmModal.open) {
+            closeConfirmModal(false);
+        }
     });
 
     categoryModalSaveBtn.addEventListener('click', submitCategoryModal);
@@ -1958,6 +2095,15 @@
         }
     });
 
+    confirmModalConfirmBtn.addEventListener('click', () => closeConfirmModal(true));
+    confirmModalCancelBtn.addEventListener('click', () => closeConfirmModal(false));
+    confirmModalCloseBtn.addEventListener('click', () => closeConfirmModal(false));
+    confirmModalBackdrop.addEventListener('click', (event) => {
+        if (event.target === confirmModalBackdrop) {
+            closeConfirmModal(false);
+        }
+    });
+
     (() => {
         const status = byId('socketStatus');
         const log = byId('eventLog');
@@ -1986,6 +2132,11 @@
                 || (typeof payload?.data?.message === 'string' ? payload.data.message.trim() : '')
                 || eventMessageFallbacks[label]
                 || '';
+
+            if (state.suppressedSocketLabelsOnce.has(label)) {
+                state.suppressedSocketLabelsOnce.delete(label);
+                return;
+            }
 
             if (label.includes('.') && message) {
                 openSocketMessageModal({

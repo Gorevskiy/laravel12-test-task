@@ -133,13 +133,6 @@ use OpenApi\Annotations as OA;
  * )
  *
  * @OA\Schema(
- *     schema="ProfileUpdateRequest",
- *     type="object",
- *     @OA\Property(property="phone", type="string", nullable=true, example="+14155550101"),
- *     @OA\Property(property="address", type="string", nullable=true, example="ул. Тверская, 7")
- * )
- *
- * @OA\Schema(
  *     schema="CategoryStoreRequest",
  *     type="object",
  *     required={"name"},
@@ -236,28 +229,6 @@ use OpenApi\Annotations as OA;
  *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
  *     @OA\Response(response=204, description="Удалено"),
  *     @OA\Response(response=404, description="Не найдено")
- * )
- *
- * @OA\Get(
- *     path="/api/users/{id}/profile",
- *     operationId="profilesShow",
- *     tags={"Профили"},
- *     summary="Получить профиль пользователя",
- *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *     @OA\Response(response=200, description="Профиль", @OA\JsonContent(ref="#/components/schemas/Profile")),
- *     @OA\Response(response=404, description="Не найдено")
- * )
- *
- * @OA\Put(
- *     path="/api/users/{id}/profile",
- *     operationId="profilesUpdate",
- *     tags={"Профили"},
- *     summary="Создать или обновить профиль",
- *     @OA\Parameter(name="id", in="path", required=true, @OA\Schema(type="integer")),
- *     @OA\RequestBody(required=true, @OA\JsonContent(ref="#/components/schemas/ProfileUpdateRequest")),
- *     @OA\Response(response=200, description="Профиль", @OA\JsonContent(ref="#/components/schemas/Profile")),
- *     @OA\Response(response=404, description="Не найдено"),
- *     @OA\Response(response=422, description="Ошибка валидации", @OA\JsonContent(ref="#/components/schemas/ValidationError"))
  * )
  *
  * @OA\Get(

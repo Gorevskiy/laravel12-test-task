@@ -69,10 +69,12 @@ class DatabaseSeeder extends Seeder
             );
         });
 
-        for ($i = 0; $i < 3; $i++) {
+        $ordersToCreate = max(0, 3 - Order::query()->count());
+
+        for ($i = 0; $i < $ordersToCreate; $i++) {
             /** @var Order $order */
             $order = Order::query()->create([
-                'user_id' => $users[$i]->id,
+                'user_id' => $users[$i % $users->count()]->id,
                 'status' => fake()->randomElement(['new', 'processing']),
                 'total' => 0,
             ]);

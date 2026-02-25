@@ -13,9 +13,15 @@
 1. `docker compose up -d --build`
 2. `docker compose exec app php artisan key:generate`
 3. `docker compose exec app php artisan migrate --seed`
-4. (опционально) `docker compose exec app php artisan l5-swagger:generate`
+4. (опционально) `docker compose exec --user www-data app php artisan l5-swagger:generate`
 
-В проекте зафиксирован `COMPOSE_PROJECT_NAME=test_project`, поэтому команды `docker compose ...` и `./run.sh` используют один и тот же набор контейнеров и volume БД. После `docker compose stop` данные сохраняются.
+Имя compose-проекта задается в `.env` (`COMPOSE_PROJECT_NAME=test_project`), поэтому команды `docker compose ...` и `./run.sh` используют один и тот же volume БД.  
+После `docker compose stop` данные сохраняются. Не используйте `docker compose down -v`, если нужно сохранить БД.
+
+### Безопасный запуск через `run.sh`
+
+- `./run.sh` проверяет активный volume PostgreSQL и пытается восстановить данные, если обнаружен более заполненный volume с тем же проектом (варианты с `-`/`_` в имени).
+- После миграций скрипт проверяет наполнение (`users/categories/products/orders`) и автоматически запускает `db:seed`, если БД неполная.
 
 ## Ссылки
 
@@ -45,11 +51,6 @@
 - `GET /api/users/{id}`
 - `PUT /api/users/{id}`
 - `DELETE /api/users/{id}`
-
-### Профили
-
-- `GET /api/users/{id}/profile`
-- `PUT /api/users/{id}/profile`
 
 ### Категории
 
@@ -99,7 +100,7 @@ curl -X DELETE http://localhost:8383/api/orders/1/items/2
 ## Swagger
 
 - UI: `/api/documentation`
-- Генерация: `docker compose exec app php artisan l5-swagger:generate`
+- Генерация: `docker compose exec --user www-data app php artisan l5-swagger:generate`
 
 ## WebSocket / Pusher
 

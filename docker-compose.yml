@@ -30,6 +30,8 @@ services:
       PUSHER_PUBLIC_HOST: localhost
       PUSHER_PUBLIC_PORT: 6001
       PUSHER_PUBLIC_SCHEME: http
+      L5_SWAGGER_GENERATE_ALWAYS: "false"
+      L5_FORMAT_TO_USE_FOR_DOCS: json
     depends_on:
       postgres:
         condition: service_healthy
